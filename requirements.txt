@@ -1,0 +1,12 @@
+pyyaml
+ruff==0.8.2
+tqdm
+pyright
+pre-commit
+matplotlib
+PyQt6
+numpy
+jax
+jaxtyping
+equinox
+diffrax
