@@ -46,6 +46,17 @@ class iHJ(eqx.Module):
         Psi0 = jnp.zeros_like(Phi0)
         return jnp.stack([Phi0, Psi0])
 
+    def phase_speed(self, k, dimless=True):
+        def vp(k, c0, h1, h2):
+            return jnp.sqrt((c0**2 + h1 * k) / (1 + h2 * k))
+
+        if dimless:
+            return vp(k, 1, self.h1, self.h2)
+
+        h1 = self.h1 * (self.c0 * self.l) ** 2
+        h2 = self.h2 * self.l**2
+        return vp(k, self.c0, h1, h2)
+
     def __call__(self, t, S, args):
         Phi = S[0]
         Psi = S[1]

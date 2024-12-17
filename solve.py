@@ -8,7 +8,7 @@ from diffrax import (
     Tsit5,
     diffeqsolve,
 )
-from heimburg_jackson.conversions import Phi2u
+from heimburg_jackson.conversions import Phi2u, x2X
 from heimburg_jackson.models import iHJ
 
 
@@ -33,6 +33,7 @@ def sech2(x):
 
 u0 = ihj.rho0 / 2 * sech2(0.2 * ihj.x / ihj.l)
 
+
 sol = diffeqsolve(
     ODETerm(ihj),
     Tsit5(),
@@ -45,10 +46,13 @@ sol = diffeqsolve(
     progress_meter=TqdmProgressMeter(20),
     max_steps=None,
 )
-
 print(sol.result)
-print(sol.ys.shape)  # type: ignore
+
+fig, ax = plt.subplots(1, 2, figsize=(12, 6))
+
+k = 2 * jnp.pi / x2X(jnp.linspace(0, 0.5, 100), ihj.l)
+ax[0].plot(2 * jnp.pi / k, ihj.phase_speed(k))
 for i in range(0, ihj.T.shape[0] + 1, 3):
-    plt.plot(ihj.x, Phi2u(sol.ys[i, 0], ihj.h2, ihj.K), label=f"{i}")  # type: ignore
+    ax[1].plot(ihj.x, Phi2u(sol.ys[i, 0], ihj.h2, ihj.K), label=f"{i}")  # type: ignore
 plt.legend()
 plt.show()
