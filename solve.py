@@ -19,10 +19,10 @@ ihj = iHJMicro(
     p=0.01,
     q=0.005,
     h1=0.2,
-    h2=0.2,
-    a1=0.9,
-    a2=0.9,
-    gamma=1.0,
+    h2=0.1,
+    a1=0.7,
+    a2=0.7,
+    gamma=jnp.sqrt(0.4),
     eta=1.0,
     nx=2**13,
     domainL=20,
@@ -54,8 +54,11 @@ print(sol.result)
 
 fig, ax = plt.subplots(1, 2, figsize=(12, 6))
 
-k = 2 * jnp.pi / x2X(jnp.linspace(0, 0.5, 100), ihj.l)
-ax[0].plot(2 * jnp.pi / k, ihj.phase_speed(k))
+k = 2 * jnp.pi / x2X(jnp.linspace(0.01, 0.5, 1000), ihj.l)
+phase_speed = jnp.linspace(0, 300, 1000) / ihj.c0
+k, phase_speed = jnp.meshgrid(k, phase_speed)
+ax[0].contour(k, phase_speed, ihj.dispersion(phase_speed * k, k), [0])
+
 for i in range(0, ihj.T.shape[0] + 1, 3):
     ax[1].plot(ihj.x, Phi2u(sol.ys[i, 0], ihj.h2, ihj.K), label=f"{i}")  # type: ignore
 plt.legend()

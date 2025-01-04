@@ -155,9 +155,9 @@ class iHJMicro(eqx.Module):
     domainL: Float  # m
     end_time: Float  # s
 
-    x: Float[Array, ""] = eqx.field(init=False)
-    K: Float[Array, ""] = eqx.field(init=False)
-    T: Float[Array, ""] = eqx.field(init=False)
+    x: Float[Array, ""] = eqx.field(init=False, repr=False)
+    K: Float[Array, ""] = eqx.field(init=False, repr=False)
+    T: Float[Array, ""] = eqx.field(init=False, repr=False)
 
     def __post_init__(self):
         self.x = jnp.linspace(-self.domainL, self.domainL, self.nx, dtype="float64")
@@ -184,27 +184,50 @@ class iHJMicro(eqx.Module):
         Lambda0 = jnp.zeros_like(Phi0)
         return jnp.stack([Phi0, Psi0, Gamma0, Lambda0])
 
-    def phase_speed(self, k: ArrayLike, dimless: bool = True) -> ArrayLike:
-        """Calculate the phase speed from the dispersion relation.
+    def dispersion(
+        self, omega: ArrayLike, k: ArrayLike, dimless: bool = True
+    ) -> ArrayLike:
+        """Return the dispersion relation in implicit form. `omega` and `k`
+        satisfy the dispersion relation if this function return 0.
 
         Args:
+            omega (ArrayLike): angular frequencies.
             k (ArrayLike): wave numbers.
             dimless (bool, optional): whether the wave numbers are given
             in a dimensionless form. Defaults to True.
 
         Returns:
-            ArrayLike: phase speed
+            ArrayLike: 0 if dispersion relation is satisfied
         """
 
-        def vp(k, c0, h1, h2):
-            return jnp.sqrt((c0**2 + h1 * k) / (1 + h2 * k))
+        def resid(omega, k, c0, h1, h2, a1, a2, eta, gamma):
+            g = h1 / h2
+            r = (
+                -(omega**2)
+                + (c0**2 - a1 * a2 / eta**2) * k**2
+                - h2 * (omega**2 - g * k**2) * k**2
+                + 1 / eta**2 * (omega**2 - k**2) * (omega**2 - gamma**2 * k**2)
+                + (h2 / eta**2)
+                * (omega**2 - g * k**2)
+                * (omega**2 - gamma**2 * k**2)
+                * k**2
+            )
+            return r
 
         if dimless:
-            return vp(k, 1, self.h1, self.h2)
+            return resid(
+                omega, k, 1, self.h1, self.h2, self.a1, self.a2, self.eta, self.gamma
+            )
 
-        h1 = self.h1 * (self.c0 * self.l) ** 2
-        h2 = self.h2 * self.l**2
-        return vp(k, self.c0, h1, h2)
+        c0, rho0, l = self.c0, self.rho0, self.l
+
+        h1 = self.h1 * (c0 * l) ** 2
+        h2 = self.h2 * l**2
+        a1 = self.a1 * rho0 * c0**2 / l
+        a2 = self.a2 * c0**2 / (l * rho0)
+        eta = self.eta * c0 / l
+        gamma = self.gamma * c0
+        return resid(omega, k, c0, h1, h2, a1, a2, eta, gamma)
 
     def __call__(self, t, S: Float[Array, "4 nx"], args) -> Float[Array, "4 nx"]:
         r"""Function used in solving the improved Heimburg-Jackson differential
@@ -271,6 +294,6 @@ class iHJMicro(eqx.Module):
                 - self.h1 * u_xxxx
                 + self.a1 * Gamma_x,
                 Lambda,
-                self.gamma * Gamma_xx - self.eta * Gamma - self.a2 * u_x,
+                self.gamma**2 * Gamma_xx - self.eta**2 * Gamma - self.a2 * u_x,
             ]
         )
