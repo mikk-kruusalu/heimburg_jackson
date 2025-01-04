@@ -9,20 +9,24 @@ from diffrax import (
     diffeqsolve,
 )
 from heimburg_jackson.conversions import Phi2u, x2X
-from heimburg_jackson.models import iHJ
+from heimburg_jackson.models import iHJMicro
 
 
-ihj = iHJ(
+ihj = iHJMicro(
     c0=171.4,
     rho0=4.107e-3,
     l=1e-2,
-    p=-3.32,
-    q=32.32,
-    h1=2.0 / (171.4 * 1e-2) ** 2,
-    h2=0.0,
+    p=0.01,
+    q=0.005,
+    h1=0.2,
+    h2=0.2,
+    a1=0.9,
+    a2=0.9,
+    gamma=1.0,
+    eta=1.0,
     nx=2**13,
     domainL=20,
-    end_time=15e-3,
+    end_time=25e-3,
     nt=9,
 )
 
