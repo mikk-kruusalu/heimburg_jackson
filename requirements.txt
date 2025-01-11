@@ -10,3 +10,4 @@ jax
 jaxtyping
 equinox
 diffrax
+h5py

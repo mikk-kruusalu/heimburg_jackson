@@ -20,5 +20,6 @@ repos:
             matplotlib,
             equinox,
             pyyaml,
-            diffrax
+            diffrax,
+            h5py
           ]
