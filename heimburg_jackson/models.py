@@ -25,7 +25,7 @@ class iHJ(eqx.Module):
     # grid
     nx: Float
     nt: Float
-    domainL: Float  # m
+    domain_length: Float  # m
     end_time: Float  # s
 
     x: Float[Array, ""] = eqx.field(init=False)
@@ -33,9 +33,13 @@ class iHJ(eqx.Module):
     T: Float[Array, ""] = eqx.field(init=False)
 
     def __post_init__(self):
-        self.x = jnp.linspace(-self.domainL, self.domainL, self.nx, dtype="float64")
+        self.x = jnp.linspace(
+            -self.domain_length, self.domain_length, self.nx, dtype="float64"
+        )
         self.K = (
-            fftfreq(self.nx, d=x2X(self.domainL / jnp.pi, self.l), dtype="float64")
+            fftfreq(
+                self.nx, d=x2X(self.domain_length / jnp.pi, self.l), dtype="float64"
+            )
             * self.nx
         )
         self.T = jnp.linspace(0, t2T(self.end_time, self.c0, self.l), self.nt)
@@ -152,7 +156,7 @@ class iHJMicro(eqx.Module):
     # grid
     nx: Float
     nt: Float
-    domainL: Float  # m
+    domain_length: Float  # m
     end_time: Float  # s
 
     x: Float[Array, ""] = eqx.field(init=False, repr=False)
@@ -160,9 +164,13 @@ class iHJMicro(eqx.Module):
     T: Float[Array, ""] = eqx.field(init=False, repr=False)
 
     def __post_init__(self):
-        self.x = jnp.linspace(-self.domainL, self.domainL, self.nx, dtype="float64")
+        self.x = jnp.linspace(
+            -self.domain_length, self.domain_length, self.nx, dtype="float64"
+        )
         self.K = (
-            fftfreq(self.nx, d=x2X(self.domainL / jnp.pi, self.l), dtype="float64")
+            fftfreq(
+                self.nx, d=x2X(self.domain_length / jnp.pi, self.l), dtype="float64"
+            )
             * self.nx
         )
         self.T = jnp.linspace(0, t2T(self.end_time, self.c0, self.l), self.nt)
