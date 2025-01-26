@@ -20,6 +20,7 @@ def save_computation(
     path = Path(path)
     fileexists = path.exists()
     with h5py.File(path, "a") as f:
+        f.attrs["type"] = type(model).__name__
         for param in fields(model):
             if not param.init or param.name == sweep_param:
                 continue
@@ -40,6 +41,8 @@ def save_computation(
             f["ys"] = solution.ys
             f.attrs["result"] = solution.result.__repr__()
         else:
+            f.attrs["sweep_param"] = sweep_param
+
             value = getattr(model, sweep_param)
             f[f"ys_{value}"] = solution.ys
             f[f"ys_{value}"].attrs["result"] = solution.result.__repr__()
@@ -66,7 +69,7 @@ def _partition_configs(config: dict, sweep_param: str) -> list[dict]:
     value_range = []
     for value in config["model"][sweep_param]:
         if type(value) is dict:
-            value_range.extend(np.arange(value["from"], value["to"], value["step"]))
+            value_range.extend(np.linspace(value["from"], value["to"], value["num"]))
         elif type(value) is list:
             value_range.extend(value)
         elif type(value) is float:
@@ -89,12 +92,19 @@ def _get_sweep_params(config: dict) -> list:
     return sweep_params
 
 
-def create_model(config: dict):
-    params = {**config["model"]}
-    params.pop("name")
-    params.update({**config["numerical"]})
-    params.update({**config["characteristic_sizes"]})
+def _create_model_flat_config(flat_config: dict) -> iHJMicro:
+    params = copy.deepcopy(flat_config)
+    model_type = params.pop("type")
+    model = eval(model_type)(**params)
 
-    model = eval(config["model"]["name"])(**params)
+    return model
+
+
+def create_model(config: dict) -> iHJMicro:
+    flat_config = {**config["model"]}
+    flat_config.update({**config["numerical"]})
+    flat_config.update({**config["characteristic_sizes"]})
+
+    model = _create_model_flat_config(flat_config)
 
     return model

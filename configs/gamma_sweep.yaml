@@ -1,5 +1,5 @@
 model:
-  name: iHJMicro
+  type: iHJMicro
   p: 0.01
   q: 0.005
   h1: 0.2
@@ -9,7 +9,7 @@ model:
   gamma:
     - from: 1.0
       to: 2.0
-      step: 0.5
+      num: 3
   eta: 1.0
 
 initial:
