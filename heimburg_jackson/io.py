@@ -5,8 +5,10 @@ from typing import Optional
 
 import diffrax
 import h5py
+import jax.numpy as jnp
 import numpy as np
 import yaml
+from jaxtyping import Array
 
 from .conversions import T2t
 from .models import iHJ, iHJMicro
@@ -111,3 +113,38 @@ def create_model(config: dict) -> iHJMicro:
     model = _create_model_flat_config(flat_config)
 
     return model
+
+
+def load_computations(
+    path: Path | str,
+) -> tuple[list[tuple[iHJMicro, Array]], Array, Optional[str]]:
+    """Loads a file containing a sweep of computations
+
+    Args:
+        path (Path | str): Path to the file
+
+    Returns:
+        tuple[list[tuple[iHJMicro, Array, Array]], Optional[str]]: the returned tuple
+        contains the list of reinitialized models solved arrays and the times.
+        Optionally the sweep parameter name is returned, otherwise `None`.
+    """
+    path = Path(path)
+    with h5py.File(path, "r") as f:
+        base_config = dict(f.attrs.items())
+        sweep_param = base_config.pop("sweep_param", None)
+
+        ts = jnp.array(f["t"])
+        models_arrays = []
+        for dset in f.keys():
+            if dset == "t":
+                continue
+            if sweep_param is None:
+                config = base_config
+            else:
+                config = {**base_config, f"{sweep_param}": f[dset].attrs[sweep_param]}
+
+            model = _create_model_flat_config(config)
+            ys = jnp.array(f[dset])
+            models_arrays.append((model, ys))
+
+    return models_arrays, ts, sweep_param
