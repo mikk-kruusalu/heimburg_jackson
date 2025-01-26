@@ -15,8 +15,8 @@ initial:
 
 numerical:
   nx: 8192
-  domain_length: 20
-  end_time: 25.0e-3
+  domain_length: 20  # [m]
+  end_time: 25.0e-3  # [s]
   nt: 3
 
 solver:
@@ -24,6 +24,6 @@ solver:
   rtol: 1.0e-8
 
 characteristic_sizes:
-  c0: 171.4
-  rho0: 4.107e-3
-  l: 1.0e-2
+  c0: 171.4       # [m/s]
+  rho0: 4.107e-3  # [g/m^2]
+  l: 1.0e-2       # [m]

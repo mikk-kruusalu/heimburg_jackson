@@ -8,6 +8,7 @@ import h5py
 import numpy as np
 import yaml
 
+from .conversions import T2t
 from .models import iHJ, iHJMicro
 
 
@@ -22,9 +23,11 @@ def save_computation(
     with h5py.File(path, "a") as f:
         f.attrs["type"] = type(model).__name__
         for param in fields(model):
+            # exclude arrays and the sweep parameter from the overall attributes
             if not param.init or param.name == sweep_param:
                 continue
 
+            # check if the file has the same parameters with what we have computed
             if fileexists:
                 if f.attrs[param.name] != getattr(model, param.name):
                     raise ValueError(
@@ -35,8 +38,8 @@ def save_computation(
             else:
                 f.attrs[param.name] = getattr(model, param.name)
 
-        if not fileexists:
-            f["t"] = solution.ts
+        if not fileexists:  # include times only once
+            f["t"] = T2t(solution.ts, model.c0, model.l)
         if sweep_param is None:
             f["ys"] = solution.ys
             f.attrs["result"] = solution.result.__repr__()
