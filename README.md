@@ -19,3 +19,5 @@ python -m venv venv
 activate it with `source venv/bin/activate` on Linux.
 
 For solving the equation use `solve.py` that takes two mandatory arguments -- the configuration yaml file and the output file paths. The yaml files should be self-explanatory. The output files can be analysed with any hdf5 viewer, [for example](https://myhdf5.hdfgroup.org/).
+
+Alternatively one can use the `describe.py` script to see the contents of the file. And `plot.py` script for plotting different graphs.
