@@ -201,8 +201,8 @@ class iHJMicro(eqx.Module):
         Args:
             omega (ArrayLike): angular frequencies.
             k (ArrayLike): wave numbers.
-            dimless (bool, optional): whether the wave numbers are given
-            in a dimensionless form. Defaults to True.
+            dimless (bool, optional): whether the wave numbers
+            and omegas are given in a dimensionless form. Defaults to True.
 
         Returns:
             ArrayLike: 0 if dispersion relation is satisfied
