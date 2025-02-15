@@ -1,0 +1,32 @@
+model:
+  type: iHJMicro
+  p: 0.01
+  q: 0.005
+  h1: 0.2
+  h2: 0.2
+  a1: 0.2
+  a2: 0.2
+  gamma: 1.0
+  eta:
+    - from: 0.2
+      to: 2.0
+      num: 19
+
+initial:
+  A0: 1.0
+  B0: 0.2
+
+numerical:
+  nx: 4096
+  domain_length: 10  # [m]
+  end_time: 21.0e-3  # [s]
+  nt: 5
+
+solver:
+  atol: 1.0e-8
+  rtol: 1.0e-8
+
+characteristic_sizes:
+  c0: 171.4       # [m/s]
+  rho0: 4.107e-3  # [g/m^2]
+  l: 1.0e-2       # [m]
