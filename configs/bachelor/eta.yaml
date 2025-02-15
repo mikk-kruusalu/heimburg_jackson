@@ -5,7 +5,7 @@ model:
   h1: 0.2
   h2: 0.2
   a1: 0.2
-  a2: 0.2
+  a1_a2_ratio: 1.0
   gamma: 1.0
   eta:
     - from: 0.2

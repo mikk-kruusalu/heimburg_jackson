@@ -31,11 +31,15 @@ def save_computation(
 
             # check if the file has the same parameters with what we have computed
             if fileexists:
+                # couldn't figure out a good check for the ratio of a1/a2
+                if param.name == "a2":
+                    continue
+
                 if f.attrs[param.name] != getattr(model, param.name):
                     raise ValueError(
                         f"The file contains other parameters than is the"
-                        f"current computation. Got {f.attrs[param.name]} in file and"
-                        f"{getattr(model, param.name)} in the model for {param.name}"
+                        f" current computation. Got {f.attrs[param.name]} in file and"
+                        f" {getattr(model, param.name)} in the model for {param.name}"
                     )
             else:
                 f.attrs[param.name] = getattr(model, param.name)
@@ -100,6 +104,8 @@ def _get_sweep_params(config: dict) -> list:
 def _create_model_flat_config(flat_config: dict) -> iHJMicro:
     params = copy.deepcopy(flat_config)
     model_type = params.pop("type")
+    params["a2"] = params["a1"] * params["a1_a2_ratio"]
+    params.pop("a1_a2_ratio")
     model = eval(model_type)(**params)
 
     return model
