@@ -53,6 +53,16 @@ def parse_args():
     parser.add_argument(
         "-o", "--output", type=str, required=False, help="Path to the output file"
     )
+    parser.add_argument(
+        "-b",
+        "--baseline",
+        type=str,
+        required=False,
+        help="Path to the baseline computation file",
+    )
+    parser.add_argument(
+        "--xrange", nargs=2, type=float, help="Space range for plotting the wave"
+    )
 
     args = parser.parse_args()
     return args
@@ -109,7 +119,7 @@ def _get_tip_speed(ts, ys, model):
 
 
 def plot_wave(
-    axis, model, t_ids, ts, sweep_param, label="", half_space=True, **plot_kw
+    axis, model, ys, t_ids, ts, sweep_param, label="", half_space=True, **plot_kw
 ):
     for t_id in t_ids:
         lab = label + f" {ts[t_id]} ms"
@@ -182,16 +192,44 @@ if __name__ == "__main__":
     args = parse_args()
 
     models_arrays, ts, sweep_param = io.load_computations(args.input)
+    baseline = None
+    baseline_ts = None
+    if args.baseline is not None:
+        baseline_models, baseline_ts, _ = io.load_computations(args.baseline)
+        if len(baseline_models) != 1:
+            print("Baseline file must contain exactly one computation")
+            exit(1)
+        baseline = baseline_models[0]
 
     t_ids = _get_timestep_ids(args, ts)
     sweep_param_ids = _get_sweep_param_ids(args, models_arrays, sweep_param)
 
     fig, axes = plt.subplots(constrained_layout=True)
     cmap = cycle(colormaps["tab10"].colors)  # pyright: ignore
+    baseline_color = "grey"
+
     if args.type == "wave":
         for sp_id in sweep_param_ids:
             model, ys = models_arrays[sp_id]
-            plot_wave(axes, model, t_ids, ts, sweep_param, half_space=args.half_space)
+            plot_wave(
+                axes, model, ys, t_ids, ts, sweep_param, half_space=args.half_space
+            )
+
+        if baseline is not None:
+            model, ys = baseline
+            plot_wave(
+                axes,
+                model,
+                ys,
+                t_ids,
+                baseline_ts,
+                None,
+                r"$a_1=0$",
+                args.half_space,
+                linestyle="--",
+                color=baseline_color,
+            )
+        axes.set_xlim(*args.xrange)
         axes.legend()
 
     elif args.type == "dispersion":
@@ -206,6 +244,13 @@ if __name__ == "__main__":
                 legend_handles.append(
                     Line2D([0], [0], color=c, label=f"{sweep_param} {round(spv, 2)}")
                 )
+
+        if baseline is not None:
+            model, _ = baseline
+            plot_dispersion(axes, args.k, args.v, model, color=baseline_color)
+            legend_handles.append(
+                Line2D([0], [0], color=baseline_color, label=r"$a_1=0$")
+            )
         axes.legend(handles=legend_handles)
 
     elif args.type == "tip-speed":
@@ -214,10 +259,33 @@ if __name__ == "__main__":
         )
         plot_tip_speed(axes, sweep_param, sp_ids, models_arrays, ts)
 
+        if baseline is not None:
+            model, ys = baseline
+            axes.axhline(
+                _get_tip_speed(baseline_ts, ys, model).item(),
+                color=baseline_color,
+                linestyle="--",
+                label="baseline",
+            )
+
     elif args.type == "symmetry":
         for sp_id in sweep_param_ids:
             model, ys = models_arrays[sp_id]
             plot_symmetry(axes, ts, ys, t_ids, model, sweep_param)
+
+        if baseline is not None:
+            model, ys = baseline
+            plot_symmetry(
+                axes,
+                baseline_ts,
+                ys,
+                t_ids,
+                model,
+                None,
+                r"$a_1=0$",
+                color=baseline_color,
+                linestyle="--",
+            )
         axes.legend()
 
     elif args.type == "animate":
@@ -234,6 +302,7 @@ if __name__ == "__main__":
             plot_wave(
                 axes[0, 0],
                 model,
+                ys,
                 t_ids,
                 ts,
                 sweep_param,
@@ -245,6 +314,40 @@ if __name__ == "__main__":
             plot_dispersion(axes[0, 1], args.k, args.v, model, color=c)
             plot_symmetry(axes[1, 1], ts, ys, t_ids, model, sweep_param)
         plot_tip_speed(axes[1, 0], sweep_param, sweep_param_ids, models_arrays, ts)
+        axes[0, 0].set_xlim(*args.xrange)
+
+        if baseline is not None:
+            model, ys = baseline
+            plot_wave(
+                axes[0, 0],
+                model,
+                ys,
+                t_ids,
+                baseline_ts,
+                None,
+                r"$a_1=0$",
+                True,
+                linestyle="--",
+                color=baseline_color,
+            )
+            plot_dispersion(axes[0, 1], args.k, args.v, model, color=baseline_color)
+            plot_symmetry(
+                axes[1, 1],
+                baseline_ts,
+                ys,
+                t_ids,
+                model,
+                None,
+                r"$a_1=0$",
+                color=baseline_color,
+                linestyle="--",
+            )
+            axes[1, 0].axhline(
+                _get_tip_speed(baseline_ts, ys, model).item(),
+                color=baseline_color,
+                linestyle="--",
+                label="baseline",
+            )
 
     if args.output is None:
         plt.show()

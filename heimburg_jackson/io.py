@@ -48,7 +48,7 @@ def save_computation(
             f["t"] = T2t(solution.ts, model.c0, model.l)
         if sweep_param is None:
             f["ys"] = solution.ys
-            f.attrs["result"] = solution.result.__repr__()
+            f["ys"].attrs["result"] = solution.result.__repr__()
         else:
             f.attrs["sweep_param"] = sweep_param
 
@@ -104,8 +104,9 @@ def _get_sweep_params(config: dict) -> list:
 def _create_model_flat_config(flat_config: dict) -> iHJMicro:
     params = copy.deepcopy(flat_config)
     model_type = params.pop("type")
-    params["a2"] = params["a1"] * params["a1_a2_ratio"]
-    params.pop("a1_a2_ratio")
+    if "a1_a2_ratio" in params.keys():
+        params["a2"] = params["a1"] * params["a1_a2_ratio"]
+        params.pop("a1_a2_ratio")
     model = eval(model_type)(**params)
 
     return model
