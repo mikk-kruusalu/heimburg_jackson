@@ -30,3 +30,9 @@ Alternatively one can use the `describe.py` script to see the contents of the fi
 ```bash
 python plot.py summary sweep.h5 -b baseline.h5 --sweep-params 0.6 1.0 1.4 -t -1 -k 0 3 100 -v 0 4 100 --xrange -4 -3
 ```
+
+Animate a saved computation to an HTML file:
+
+```bash
+python plot.py animate sweep.h5 --sweep-params 1.0 --half-space --fps 10 -o wave.html
+```

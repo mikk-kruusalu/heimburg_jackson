@@ -1,7 +1,7 @@
 import argparse
 from itertools import cycle
+from pathlib import Path
 
-import diffrax
 import heimburg_jackson.io as io
 import jax.numpy as jnp
 import matplotlib.pyplot as plt
@@ -9,6 +9,7 @@ from heimburg_jackson.conversions import Phi2u
 from heimburg_jackson.models import iHJMicro
 from jax.numpy.fft import fft, ifft
 from matplotlib import colormaps
+from matplotlib.animation import FuncAnimation
 from matplotlib.lines import Line2D
 
 
@@ -63,8 +64,17 @@ def parse_args():
     parser.add_argument(
         "--xrange", nargs=2, type=float, help="Space range for plotting the wave"
     )
+    parser.add_argument(
+        "--fps",
+        type=int,
+        default=10,
+        help="Frames per second for animation playback and saving",
+    )
 
     args = parser.parse_args()
+    if args.fps <= 0:
+        parser.error("--fps must be positive")
+
     return args
 
 
@@ -184,8 +194,88 @@ def plot_symmetry(axis, ts, ys, t_ids, model, sweep_param, label="", **plot_kw):
     axis.set_ylabel(r"$U_x$")
 
 
-def animate(sol: diffrax.Solution):
-    pass
+def _animation_label(model, sweep_param: str | None, fallback: str) -> str:
+    if sweep_param is None:
+        return fallback
+
+    spv = getattr(model, sweep_param)
+    return f"{sweep_param} {round(float(spv), 2)}"
+
+
+def animate(
+    axis,
+    models_arrays,
+    ts,
+    sweep_param: str | None,
+    half_space=True,
+    x_range=None,
+    labels=None,
+    fps=10,
+) -> FuncAnimation:
+    lines = []
+    density_arrays = []
+    x_min = float("inf")
+    x_max = -float("inf")
+    y_min = float("inf")
+    y_max = -float("inf")
+
+    if labels is None:
+        labels = [
+            _animation_label(model, sweep_param, f"solution {i + 1}")
+            for i, (model, _) in enumerate(models_arrays)
+        ]
+
+    for label, (model, ys) in zip(labels, models_arrays):
+        space_slice = slice(model.nx // 2) if half_space else slice(model.nx)
+        x = model.x[space_slice]
+        density = Phi2u(ys[:, 0], model.h2, model.K)[:, space_slice]
+
+        (line,) = axis.plot(x, density[0], label=label)
+        lines.append(line)
+        density_arrays.append(density)
+
+        x_min = min(x_min, float(jnp.min(x)))
+        x_max = max(x_max, float(jnp.max(x)))
+        y_min = min(y_min, float(jnp.min(density)))
+        y_max = max(y_max, float(jnp.max(density)))
+
+    if x_range is None:
+        axis.set_xlim(x_min, x_max)
+    else:
+        axis.set_xlim(*x_range)
+
+    y_span = y_max - y_min
+    y_padding = 0.05 * y_span if y_span > 0 else 0.05
+    axis.set_ylim(y_min - y_padding, y_max + y_padding)
+    axis.set_xlabel("space [m]")
+    axis.set_ylabel(r"dimensionless density $U$")
+    if any(labels):
+        axis.legend()
+
+    title = axis.set_title(f"t = {float(ts[0]):.6g} ms")
+
+    def update(frame):
+        for line, density in zip(lines, density_arrays):
+            line.set_ydata(density[frame])
+        title.set_text(f"t = {float(ts[frame]):.6g} ms")
+        return [*lines, title]
+
+    return FuncAnimation(
+        axis.figure,
+        update,
+        frames=len(ts),
+        interval=1000 / fps,
+        blit=False,
+    )
+
+
+def save_animation(animation: FuncAnimation, output: str, fps: int):
+    output_path = Path(output)
+    if output_path.suffix.lower() in {".html", ".htm"}:
+        output_path.write_text(animation.to_jshtml(fps=fps), encoding="utf-8")
+        return
+
+    animation.save(output, fps=fps)
 
 
 if __name__ == "__main__":
@@ -207,6 +297,7 @@ if __name__ == "__main__":
     fig, axes = plt.subplots(constrained_layout=True)
     cmap = cycle(colormaps["tab10"].colors)  # pyright: ignore
     baseline_color = "grey"
+    animation = None
 
     if args.type == "wave":
         for sp_id in sweep_param_ids:
@@ -229,7 +320,8 @@ if __name__ == "__main__":
                 linestyle="--",
                 color=baseline_color,
             )
-        axes.set_xlim(*args.xrange)
+        if args.xrange is not None:
+            axes.set_xlim(*args.xrange)
         axes.legend()
 
     elif args.type == "dispersion":
@@ -289,8 +381,33 @@ if __name__ == "__main__":
         axes.legend()
 
     elif args.type == "animate":
-        print("Not implemented yet")
-        exit(1)
+        animated_models_arrays = [models_arrays[sp_id] for sp_id in sweep_param_ids]
+        labels = [
+            _animation_label(model, sweep_param, "")
+            for model, _ in animated_models_arrays
+        ]
+
+        if baseline is not None:
+            if (
+                baseline_ts is not None
+                and baseline_ts.shape == ts.shape
+                and jnp.allclose(baseline_ts, ts)
+            ):
+                animated_models_arrays.append(baseline)
+                labels.append(r"$a_1=0$")
+            else:
+                print("Baseline times differ from input times. Skipping baseline.")
+
+        animation = animate(
+            axes,
+            animated_models_arrays,
+            ts,
+            sweep_param,
+            half_space=args.half_space,
+            x_range=args.xrange,
+            labels=labels,
+            fps=args.fps,
+        )
 
     elif args.type == "summary":
         plt.close("all")
@@ -314,7 +431,8 @@ if __name__ == "__main__":
             plot_dispersion(axes[0, 1], args.k, args.v, model, color=c)
             plot_symmetry(axes[1, 1], ts, ys, t_ids, model, sweep_param)
         plot_tip_speed(axes[1, 0], sweep_param, sweep_param_ids, models_arrays, ts)
-        axes[0, 0].set_xlim(*args.xrange)
+        if args.xrange is not None:
+            axes[0, 0].set_xlim(*args.xrange)
 
         if baseline is not None:
             model, ys = baseline
@@ -351,5 +469,7 @@ if __name__ == "__main__":
 
     if args.output is None:
         plt.show()
+    elif animation is not None:
+        save_animation(animation, args.output, args.fps)
     else:
         fig.savefig(args.output)

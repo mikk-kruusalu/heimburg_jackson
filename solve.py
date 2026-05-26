@@ -77,4 +77,6 @@ if __name__ == "__main__":
     for config in configs:
         if sweep_param is not None:
             print(f"Solving with {sweep_param}: {config['model'][sweep_param]}")
+        else:
+            print(f"Solving with: {config['model']}")
         sol, ihj = solve(config, args.output, sweep_param)
