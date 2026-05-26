@@ -1,0 +1,25 @@
+model:
+  type: iHJ
+  p: -0.16
+  q: 0.8
+  h1: 2.0
+  h2: 3.0
+
+initial:
+  A0: 2.0
+  B0: 0.0025
+
+numerical:
+  nx: 16384
+  domain_length: 32  # [m]
+  end_time: 0.120  # [s]
+  nt: 32
+
+solver:
+  atol: 1.0e-12
+  rtol: 1.0e-12
+
+characteristic_sizes:
+  c0: 171.4       # [m/s]
+  rho0: 4.107e-3  # [g/m^2]
+  l: 1.0e-2       # [m]
